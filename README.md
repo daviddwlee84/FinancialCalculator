@@ -2,6 +2,16 @@
 
 Financial calculators based on Streamlit
 
+- [Streamlit](https://financial-calculator.streamlit.app/)
+
+## Getting Started
+
+```bash
+pip install -r requirements.txt
+
+streamlit run ./Overview.py
+```
+
 ## Resources
 
 ### Finance Library
