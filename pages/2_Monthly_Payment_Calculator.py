@@ -2,6 +2,7 @@ from typing import Literal
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 st.set_page_config(page_title="Monthly Payment Calculator")
 
@@ -18,6 +19,7 @@ with st.form("MonthlyPaymentCalculator"):
     loan_type: Literal["Equal Principal and Interest Loan"] = st.selectbox(
         "Loan Type", ["Equal Principal and Interest Loan"]
     )
+
     present_value = st.number_input(
         "Loan Principal (Total Amount) [Present Value]", min_value=0, value=188445
     )
@@ -36,7 +38,14 @@ with st.form("MonthlyPaymentCalculator"):
         "Total Period (months) [# of compounding periods]", min_value=1, value=60
     )
 
+    with_prepayment = st.checkbox(
+        "With Prepayment (assume return all principal at once)", True
+    )
     monthly_interest_rate = nominal_interest_rate / 12
+
+    prepayment_period = st.number_input(
+        "Prepayment on Period", min_value=1, max_value=period, value=25
+    )
 
     if submit := st.form_submit_button("Calculate"):
         if loan_type == "Equal Principal and Interest Loan":
@@ -72,6 +81,11 @@ if loan_type == "Equal Principal and Interest Loan":
         monthly_interest_rate * 100 if monthly_interest_rate is not None else None,
     )
 st.metric("Monthly Payment", monthly_payment)
+st.metric(
+    "Total Interest (simple sum)",
+    cash_flow["monthly_interest"].sum() if not cash_flow.empty else None,
+)
+
 if not cash_flow.empty:
     st.dataframe(cash_flow, hide_index=True)
     fig, ax = plt.subplots()
@@ -94,3 +108,50 @@ if not cash_flow.empty:
     plt.title("Principal and Interest over Time")
     st.pyplot(fig)
     st.caption("Red area is interest. Green area is principal")
+
+    if with_prepayment:
+        st.subheader(f"With Prepayment on period {prepayment_period}")
+        new_cash_flow = cash_flow.iloc[: prepayment_period + 1]
+        new_cash_flow.loc[prepayment_period, "monthly_principal"] = new_cash_flow.loc[
+            prepayment_period - 1, "principal_left"
+        ]
+        new_cash_flow.loc[prepayment_period, "monthly_payment"] = (
+            new_cash_flow.loc[prepayment_period - 1, "principal_left"]
+            + new_cash_flow.loc[prepayment_period, "monthly_interest"]
+        )
+        new_cash_flow.loc[prepayment_period, "money_paid"] = (
+            new_cash_flow.loc[prepayment_period - 1, "money_paid"]
+            + new_cash_flow.loc[prepayment_period, "monthly_payment"]
+        )
+        np.testing.assert_almost_equal(
+            present_value + new_cash_flow["monthly_interest"].sum(),
+            new_cash_flow.loc[prepayment_period, "money_paid"],
+        )
+        new_cash_flow.loc[prepayment_period, "principal_returned"] = present_value
+        new_cash_flow.loc[prepayment_period, "principal_left"] = 0
+
+        st.metric(
+            "Total Interest (simple sum)", new_cash_flow["monthly_interest"].sum()
+        )
+
+        st.dataframe(new_cash_flow, hide_index=True)
+
+        fig2, ax2 = plt.subplots()
+        ax2.fill_between(
+            new_cash_flow["period"],
+            new_cash_flow["monthly_payment"],
+            new_cash_flow["monthly_principal"],
+            color="red",
+            alpha=0.3,
+        )
+        ax2.fill_between(
+            new_cash_flow["period"],
+            new_cash_flow["monthly_principal"],
+            0,
+            color="green",
+            alpha=0.3,
+        )
+        # TODO: https://stackoverflow.com/questions/67488191/how-to-add-text-inside-a-filled-area-in-matplotlib
+        plt.title("Principal and Interest over Time")
+        st.pyplot(fig2)
+        st.caption("Red area is interest. Green area is principal")
