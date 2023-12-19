@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy_financial as npf
 
 st.set_page_config(page_title="Monthly Payment Calculator")
 
@@ -13,7 +14,7 @@ monthly_interest = None
 monthly_principal = None
 monthly_payment = None
 cash_flow = pd.DataFrame()
-
+irr = None
 
 with st.form("MonthlyPaymentCalculator"):
     loan_type: Literal["Equal Principal and Interest Loan"] = st.selectbox(
@@ -27,9 +28,9 @@ with st.form("MonthlyPaymentCalculator"):
     nominal_interest_rate = (
         st.number_input(
             "Nominal Annual Interest Rate",
-            min_value=0,
-            max_value=100,
-            value=3,
+            min_value=0.0,
+            max_value=100.0,
+            value=3.0,
         )
         / 100
     )
@@ -71,6 +72,11 @@ with st.form("MonthlyPaymentCalculator"):
                 present_value - cash_flow["principal_returned"]
             )
 
+            # Annual IRR to Monthly IRR
+            irr = (
+                1 + npf.irr([-present_value] + cash_flow["monthly_payment"].to_list())
+            ) ** 12 - 1
+
 
 if loan_type == "Equal Principal and Interest Loan":
     st.metric("Monthly Principal", monthly_principal)
@@ -85,6 +91,7 @@ st.metric(
     "Total Interest (simple sum)",
     cash_flow["monthly_interest"].sum() if not cash_flow.empty else None,
 )
+st.metric("Internal Rate of Interest (%)", irr * 100 if irr is not None else None)
 
 if not cash_flow.empty:
     st.dataframe(cash_flow, hide_index=True)
@@ -130,8 +137,16 @@ if not cash_flow.empty:
         new_cash_flow.loc[prepayment_period, "principal_returned"] = present_value
         new_cash_flow.loc[prepayment_period, "principal_left"] = 0
 
+        new_irr = (
+            1 + npf.irr([-present_value] + new_cash_flow["monthly_payment"].to_list())
+        ) ** 12 - 1
+
         st.metric(
             "Total Interest (simple sum)", new_cash_flow["monthly_interest"].sum()
+        )
+
+        st.metric(
+            "Internal Rate of Interest (%)", new_irr * 100
         )
 
         st.dataframe(new_cash_flow, hide_index=True)
