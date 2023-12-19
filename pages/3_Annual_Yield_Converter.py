@@ -24,8 +24,10 @@ def annualized_rate_of_return(
 
 
 with st.form("ToAnnualYieldByProfit"):
-    st.subheader("Convert using Profit")
-    st.caption("NOTE: currently this value is approximate")
+    st.subheader("Convert To Annual Yield using Profit")
+    st.caption(
+        "NOTE: currently this value is approximate (without consider compounding)"
+    )
     capital = st.number_input("Capital", min_value=0.0, value=100000.0)
     profit = st.number_input("Profit", min_value=0.0, value=1000.0)
     period = st.number_input("Days", min_value=1, value=30)
@@ -38,8 +40,10 @@ with st.form("ToAnnualYieldByProfit"):
 
 
 with st.form("ToAnnualYieldByRatio"):
-    st.subheader("Convert using Profit Ratio")
-    st.caption("NOTE: currently this value is approximate")
+    st.subheader("Convert To Annual Yield using Profit Ratio")
+    st.caption(
+        "NOTE: currently this value is approximate (without consider compounding)"
+    )
     capital2 = st.number_input("Capital", min_value=0.0, value=100000.0)
     ratio2 = st.number_input("Profit Ratio (%)", min_value=0.0, value=1.0)
     period2 = st.number_input("Days", min_value=1, value=30)
@@ -61,3 +65,6 @@ with st.form("AnnualYieldToOtherPeriod"):
         new_rate = (1 + arr / 100) ** (period3 / 365) - 1
         st.metric("Total Profit Rate (%)", new_rate * 100)
         st.metric("Total Profit", new_rate * capital3)
+        new_rate2 = arr / 100 * (period3 / 365)
+        st.metric("Total Profit Rate (%) without consider compounding", new_rate2 * 100)
+        st.metric("Total Profit without consider compounding", new_rate2 * capital3)
