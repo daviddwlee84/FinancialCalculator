@@ -48,6 +48,13 @@ with st.form("MonthlyPaymentCalculator"):
         "Prepayment on Period", min_value=1, max_value=period, value=25
     )
 
+    with_discount = st.checkbox(
+        "With Discount (assume discount happened on the 0th period)", False
+    )
+    discount_amount = (
+        st.number_input("Discount Amount", min_value=0.0, value=7537.8) * with_discount
+    )
+
     if submit := st.form_submit_button("Calculate"):
         if loan_type == "Equal Principal and Interest Loan":
             monthly_interest = monthly_interest_rate * present_value
@@ -74,7 +81,11 @@ with st.form("MonthlyPaymentCalculator"):
 
             # Annual IRR to Monthly IRR
             irr = (
-                1 + npf.irr([-present_value] + cash_flow["monthly_payment"].to_list())
+                1
+                + npf.irr(
+                    [-present_value - discount_amount]
+                    + cash_flow["monthly_payment"].to_list()
+                )
             ) ** 12 - 1
 
 
@@ -138,16 +149,18 @@ if not cash_flow.empty:
         new_cash_flow.loc[prepayment_period, "principal_left"] = 0
 
         new_irr = (
-            1 + npf.irr([-present_value] + new_cash_flow["monthly_payment"].to_list())
+            1
+            + npf.irr(
+                [-present_value - discount_amount]
+                + new_cash_flow["monthly_payment"].to_list()
+            )
         ) ** 12 - 1
 
         st.metric(
             "Total Interest (simple sum)", new_cash_flow["monthly_interest"].sum()
         )
 
-        st.metric(
-            "Internal Rate of Interest (%)", new_irr * 100
-        )
+        st.metric("Internal Rate of Interest (%)", new_irr * 100)
 
         st.dataframe(new_cash_flow, hide_index=True)
 
