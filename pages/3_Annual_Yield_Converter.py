@@ -53,7 +53,7 @@ with st.form("ToAnnualYieldByRatio"):
         )
 
 with st.form("AnnualYieldToOtherPeriod"):
-    st.subheader("Convert using Profit Ratio")
+    st.subheader("Convert Annual Yield To Other Periods")
     capital3 = st.number_input("Capital", min_value=0.0, value=100000.0)
     arr = st.number_input("Annualized Rate of Return (%)", min_value=0.0, value=3.880)
     period3 = st.number_input("New Period in Days", min_value=1, value=14)
